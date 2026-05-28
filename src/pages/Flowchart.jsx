@@ -257,7 +257,22 @@ export default function Flowchart() {
       );
     }
 
-    const rx = node.type === 'start' || node.type === 'end' ? 22 : 6;
+    if (node.type === 'input' || node.type === 'output') {
+      const slant = 16;
+      const points = `${x + slant},${y} ${x + w},${y} ${x + w - slant},${y + h} ${x},${y + h}`;
+      return (
+        <g key={node.id}>
+          <polygon points={points} className="fc-rect fc-process-shape" />
+          <foreignObject x={x + slant + 6} y={y + 4} width={w - slant - 12} height={h - 8}>
+            <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
+              {node.text}
+            </div>
+          </foreignObject>
+        </g>
+      );
+    }
+
+    const rx = node.type === 'start' || node.type === 'end' ? 22 : 0;
     const cls =
       node.type === 'start' || node.type === 'end'
         ? 'fc-rect fc-start-end-shape'

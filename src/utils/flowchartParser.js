@@ -4,9 +4,16 @@
  */
 
 function simplifyText(text) {
-  const m = text.match(/^System\.out\.print(?:ln)?\s*\((.+)\)\s*;?\s*$/);
+  const m = text.match(/^System\.out\.print(?:ln|f)?\s*\((.+)\)\s*;?\s*$/);
   if (m) return 'output ' + m[1];
   return text;
+}
+
+function classifyIO(line) {
+  if (/^System\.out\.print(?:ln|f)?\s*\(/.test(line)) return 'output';
+  if (/^(?:Scanner|BufferedReader|readLine|read\s*\()/.test(line)) return 'input';
+  if (/\.next(?:Int|Line|Double|Float|Boolean|Long|Short|Byte)?\s*\(/.test(line)) return 'input';
+  return 'process';
 }
 
 function classifyLine(line) {
@@ -114,7 +121,7 @@ function buildTree(lines) {
           lastDecision.falseBranch = [node];
           stack.push({ nodes: node.trueBranch, type: 'if-body', parentNode: node });
         } else {
-          ctx.nodes.push({ type: 'process', text: simplifyText(line) });
+          ctx.nodes.push({ type: classifyIO(line), text: simplifyText(line) });
         }
         break;
       }
@@ -141,7 +148,7 @@ function buildTree(lines) {
             parentNode: lastDecision,
           });
         } else {
-          ctx.nodes.push({ type: 'process', text: simplifyText(line) });
+          ctx.nodes.push({ type: classifyIO(line), text: simplifyText(line) });
         }
         break;
       }
@@ -183,7 +190,7 @@ function buildTree(lines) {
       }
 
       default:
-        ctx.nodes.push({ type: 'process', text: simplifyText(line) });
+        ctx.nodes.push({ type: classifyIO(line), text: simplifyText(line) });
         break;
     }
   }
@@ -391,9 +398,9 @@ export function flattenTree(tree) {
     }
 
     for (const item of block) {
-      if (item.type === 'process') {
+      if (item.type === 'process' || item.type === 'input' || item.type === 'output') {
         const id = nextId();
-        nodes.push({ id, type: 'process', text: item.text, depth });
+        nodes.push({ id, type: item.type, text: item.text, depth });
         connectPrev(id);
         if (!blockFirst) blockFirst = id;
         prev = id;
