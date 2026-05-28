@@ -238,8 +238,10 @@ export function flattenTree(tree) {
     function connectPrev(id) {
       if (!prev) return;
       if (prev.type === 'multi') {
-        prev.exits.forEach(({ exitId, label: exitLabel }) => {
-          edges.push({ from: exitId, to: id, label: exitLabel });
+        prev.exits.forEach(({ exitId, label: exitLabel, exitRight }) => {
+          const edge = { from: exitId, to: id, label: exitLabel };
+          if (exitRight) edge.exitRight = true;
+          edges.push(edge);
         });
         prevForloopExit = false;
       } else if (prevForloopExit) {
@@ -281,7 +283,7 @@ export function flattenTree(tree) {
         const exits = [];
         if (trueResult.last) exits.push({ exitId: trueResult.last, label: '' });
         if (falseLast) exits.push({ exitId: falseLast, label: '' });
-        else exits.push({ exitId: decId, label: 'F' });
+        else exits.push({ exitId: decId, label: 'F', exitRight: true });
 
         if (exits.length === 1) {
           prev = exits[0].exitId;

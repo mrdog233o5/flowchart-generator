@@ -17,11 +17,6 @@ const SAMPLE_CODE = `public class Example {
     int x = 5;
     if (x > 3) {
       System.out.println("Big");
-    } else {
-      System.out.println("Small");
-    }
-    for (int i = 0; i < x; i++) {
-      System.out.println(i);
     }
     System.out.println("Done");
   }
@@ -108,6 +103,16 @@ function layoutFlowchart(flatNodes, flatEdges) {
     colBottom[n.depth] = y + dims.h;
   });
 
+  // Compute max right edge per column (for F-branch bypass offset)
+  const colMaxRight = {};
+  Object.entries(positions).forEach(([id, pos]) => {
+    const nd = nodeMap[id];
+    const r = pos.x + pos.w;
+    if (!colMaxRight[nd.depth] || r > colMaxRight[nd.depth]) {
+      colMaxRight[nd.depth] = r;
+    }
+  });
+
   // Compute edge endpoints
   const renderedEdges = [];
   flatEdges.forEach((e) => {
@@ -160,6 +165,13 @@ function layoutFlowchart(flatNodes, flatEdges) {
       sideEnter = true;
     }
 
+    let rightX = null;
+    if (sideExit && e.exitRight && fromNode) {
+      const fromRight = fromPos.x + fromPos.w;
+      const colMaxR = colMaxRight[fromNode.depth] || fromRight;
+      rightX = Math.max(fromRight + 80, colMaxR + 20);
+    }
+
     renderedEdges.push({
       from: e.from,
       to: e.to,
@@ -170,6 +182,7 @@ function layoutFlowchart(flatNodes, flatEdges) {
       y2,
       sideExit,
       sideEnter,
+      rightX,
     });
   });
 
@@ -280,7 +293,7 @@ export default function Flowchart() {
         path = `M ${e.x1} ${e.y1} L ${leftOff} ${e.y1} L ${leftOff} ${e.y2} L ${e.x2} ${e.y2}`;
       } else if (e.sideExit) {
         if (e.x2 < e.x1) {
-          const rightX = e.x1 + 40;
+          const rightX = e.rightX || (e.x1 + 80);
           const turnY = e.y2 - 15;
           path = `M ${e.x1} ${e.y1} L ${rightX} ${e.y1} L ${rightX} ${turnY} L ${e.x2} ${turnY} L ${e.x2} ${e.y2}`;
         } else {
@@ -303,7 +316,7 @@ export default function Flowchart() {
           {e.label && (
             <text
               x={e.sideEnter ? e.x1 + (e.x2 - e.x1) * 0.4
-                : e.sideExit ? e.x1 + 20
+                : e.sideExit ? e.x1 + 40
                 : Math.abs(e.x1 - e.x2) < 5 ? e.x1 - 14
                 : e.x1 + (e.x2 - e.x1) * 0.6}
               y={e.sideEnter ? midY - 6
