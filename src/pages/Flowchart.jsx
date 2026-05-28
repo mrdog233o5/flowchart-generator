@@ -4,7 +4,7 @@ import { parseJavaCode, flattenTree } from '../utils/flowchartParser';
 const DECISION_H = 42;
 const MERGE_SIZE = 10;
 const START_END_W = 80;
-const COL_GAP = 190;
+const COL_GAP = 230;
 const ROW_GAP = 16;
 const PAD_X = 24;
 const PAD_Y = 16;
