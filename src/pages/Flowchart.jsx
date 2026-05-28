@@ -4,7 +4,7 @@ import { parseJavaCode, flattenTree } from '../utils/flowchartParser';
 const DECISION_H = 42;
 const MERGE_SIZE = 10;
 const START_END_W = 80;
-const COL_GAP = 230;
+const COL_GAP = 160;
 const ROW_GAP = 16;
 const PAD_X = 24;
 const PAD_Y = 16;
@@ -22,24 +22,40 @@ const SAMPLE_CODE = `public class Example {
   }
 }`;
 
+function wordWrap(text, maxChars) {
+  const lines = [];
+  for (const para of text.split('\n')) {
+    if (para.length === 0) { lines.push(''); continue; }
+    const words = para.split(' ');
+    let cur = '';
+    for (let w of words) {
+      const cand = cur ? cur + ' ' + w : w;
+      if (cand.length <= maxChars) {
+        cur = cand;
+      } else {
+        if (cur) lines.push(cur);
+        while (w.length > maxChars) { lines.push(w.slice(0, maxChars)); w = w.slice(maxChars); }
+        cur = w || '';
+      }
+    }
+    if (cur) lines.push(cur);
+  }
+  return lines;
+}
+
 function computeNodeDims(node) {
   if (node.type === 'merge') return { w: MERGE_SIZE, h: MERGE_SIZE };
 
   const text = node.text || '';
-  const charW = 7;
+  const charW = 6.5;
   const lineH = 14;
   const padX = (node.type === 'start' || node.type === 'end') ? 20 : 12;
   const padY = 6;
-  const maxContentW = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 170 : 200;
-  const charsPerLine = Math.max(1, Math.floor(maxContentW / charW));
+  const maxChars = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 15 : 18;
 
-  let totalLines = 0;
-  let maxLinePx = 0;
-  text.split('\n').forEach((line) => {
-    const wrapped = Math.max(1, Math.ceil(line.length / charsPerLine));
-    totalLines += wrapped;
-    maxLinePx = Math.max(maxLinePx, Math.min(line.length, charsPerLine) * charW);
-  });
+  const wrapped = wordWrap(text, maxChars);
+  const totalLines = wrapped.length || 1;
+  const maxLinePx = Math.ceil(wrapped.reduce((m, l) => Math.max(m, l.length * charW), 0));
 
   let w, h;
   if (node.type === 'start' || node.type === 'end') {
