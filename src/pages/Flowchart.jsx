@@ -142,6 +142,9 @@ function layoutFlowchart(flatNodes, flatEdges) {
         x1 = fromCX;
         y1 = fromPos.y + fromPos.h;
       }
+    } else if (e.loopBack) {
+      x1 = fromPos.x - 30;
+      y1 = fromPos.y + fromPos.h / 2;
     } else {
       x1 = fromPos.x + fromPos.w / 2;
       y1 = fromPos.y + fromPos.h;
