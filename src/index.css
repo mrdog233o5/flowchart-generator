@@ -87,6 +87,28 @@ body {
   font-weight: 500;
 }
 
+.fc-toolbar {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.fc-export-btn {
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #18181b;
+  color: #fafafa;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.fc-export-btn:hover {
+  background: #3f3f46;
+}
+
 .fc-chart-wrapper {
   margin-top: 24px;
   overflow-x: auto;

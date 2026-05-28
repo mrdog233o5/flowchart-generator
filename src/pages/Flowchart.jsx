@@ -215,6 +215,40 @@ export default function Flowchart() {
     setFlippedNodes((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
+  const exportSVG = () => {
+    const svgEl = document.querySelector('.fc-svg');
+    if (!svgEl) return;
+
+    const clone = svgEl.cloneNode(true);
+    const svgStyles = `
+      .fc-node-text{width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:0.7rem;font-family:'SF Mono','Fira Code','Cascadia Code',monospace;line-height:1.3;overflow:hidden;overflow-wrap:break-word}
+      .fc-rect{stroke:#a1a1aa;stroke-width:1.5}
+      .fc-start-end-shape{fill:#f0fdf4;stroke:#86efac}
+      .fc-process-shape{fill:#eff6ff;stroke:#93c5fd}
+      .fc-diamond{stroke-width:1.5}
+      .fc-decision-shape{fill:#fef9c3;stroke:#fde047}
+      .fc-merge-circle{fill:#e4e4e7;stroke:#a1a1aa;stroke-width:1}
+      .fc-edge{stroke:#a1a1aa;stroke-width:1.5;fill:none}
+      .fc-arrowhead{fill:#71717a}
+      .fc-edge-label{fill:#71717a;font-size:11px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+    `;
+    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = svgStyles;
+    clone.insertBefore(styleEl, clone.firstChild);
+
+    const svgString = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob(
+      ['<?xml version="1.0" encoding="UTF-8"?>\n', svgString],
+      { type: 'image/svg+xml' },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'flowchart.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const tree = useMemo(() => {
     try {
       setError('');
@@ -416,6 +450,14 @@ export default function Flowchart() {
       />
 
       {error && <div className="fc-error">Error: {error}</div>}
+
+      {flatNodes.length > 0 && (
+        <div className="fc-toolbar">
+          <button className="fc-export-btn" onClick={exportSVG}>
+            Export SVG
+          </button>
+        </div>
+      )}
 
       <div className="fc-chart-wrapper">
         {flatNodes.length > 0 ? (
