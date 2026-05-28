@@ -66,7 +66,7 @@ function buildTree(lines) {
         const condition = extractCondition(line, 'if');
         const node = {
           type: 'decision',
-          condition: 'if (' + condition + ')',
+          condition: condition,
           trueBranch: [],
           falseBranch: null,
         };
@@ -207,12 +207,14 @@ export function flattenTree(tree) {
   const startId = 'start';
   const endId = 'end';
   let idCounter = 0;
+  let minDepth = 0;
 
   function nextId() {
     return 'n' + idCounter++;
   }
 
   function processBlock(block, depth) {
+    minDepth = Math.min(minDepth, depth);
     if (block.length === 0) return { first: null, last: null };
 
     let prev = null;
@@ -233,7 +235,7 @@ export function flattenTree(tree) {
         if (prev) edges.push({ from: prev, to: decId, label: '' });
         else blockFirst = decId;
 
-        const trueResult = processBlock(item.trueBranch, depth + 1);
+        const trueResult = processBlock(item.trueBranch, depth);
         if (trueResult.first) {
           edges.push({ from: decId, to: trueResult.first, label: 'T' });
         }
@@ -284,20 +286,26 @@ export function flattenTree(tree) {
     return { first: blockFirst, last: blockLast };
   }
 
-  nodes.push({ id: startId, type: 'start', text: 'Start', depth: 0 });
+  const BASE = 1;
+  nodes.push({ id: startId, type: 'start', text: 'Start', depth: BASE });
 
   if (tree.length > 0) {
-    const result = processBlock(tree, 0);
+    const result = processBlock(tree, BASE);
     if (result.first) {
       edges.push({ from: startId, to: result.first, label: '' });
     }
     if (result.last) {
-      nodes.push({ id: endId, type: 'end', text: 'End', depth: 0 });
+      nodes.push({ id: endId, type: 'end', text: 'End', depth: BASE });
       edges.push({ from: result.last, to: endId, label: '' });
     }
   } else {
-    nodes.push({ id: endId, type: 'end', text: 'End', depth: 0 });
+    nodes.push({ id: endId, type: 'end', text: 'End', depth: BASE });
     edges.push({ from: startId, to: endId, label: '' });
+  }
+
+  if (minDepth < 0) {
+    const shift = -minDepth;
+    nodes.forEach((n) => { n.depth += shift; });
   }
 
   return { nodes, edges };

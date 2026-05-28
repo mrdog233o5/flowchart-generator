@@ -107,14 +107,41 @@ function layoutFlowchart(flatNodes, flatEdges) {
     const toPos = positions[e.to];
     if (!fromPos || !toPos) return;
 
+    const fromNode = nodeMap[e.from];
+    const isFromDiamond = fromNode && (fromNode.type === 'decision' || fromNode.type === 'loop');
+
+    let x1, y1, sideExit = false;
+    if (isFromDiamond) {
+      const fromCX = fromPos.x + fromPos.w / 2;
+      const fromCY = fromPos.y + fromPos.h / 2;
+      const toCX = toPos.x + toPos.w / 2;
+
+      if (toCX < fromCX - 5) {
+        x1 = fromPos.x;
+        y1 = fromCY;
+        sideExit = true;
+      } else if (toCX > fromCX + 5) {
+        x1 = fromPos.x + fromPos.w;
+        y1 = fromCY;
+        sideExit = true;
+      } else {
+        x1 = fromCX;
+        y1 = fromPos.y + fromPos.h;
+      }
+    } else {
+      x1 = fromPos.x + fromPos.w / 2;
+      y1 = fromPos.y + fromPos.h;
+    }
+
     renderedEdges.push({
       from: e.from,
       to: e.to,
       label: e.label || '',
-      x1: fromPos.x + fromPos.w / 2,
-      y1: fromPos.y + fromPos.h,
+      x1,
+      y1,
       x2: toPos.x + toPos.w / 2,
       y2: toPos.y,
+      sideExit,
     });
   });
 
@@ -220,7 +247,9 @@ export default function Flowchart() {
       const midY = (e.y1 + e.y2) / 2;
 
       let path = '';
-      if (Math.abs(e.x1 - e.x2) < 5) {
+      if (e.sideExit) {
+        path = `M ${e.x1} ${e.y1} L ${e.x2} ${e.y1} L ${e.x2} ${e.y2}`;
+      } else if (Math.abs(e.x1 - e.x2) < 5) {
         path = `M ${e.x1} ${e.y1} L ${e.x2} ${e.y2}`;
       } else {
         path = `M ${e.x1} ${e.y1} L ${e.x1} ${midY} L ${e.x2} ${midY} L ${e.x2} ${e.y2}`;
@@ -235,10 +264,10 @@ export default function Flowchart() {
           />
           {e.label && (
             <text
-              x={e.x1 + (e.x2 - e.x1) * 0.6}
-              y={midY - 6}
+              x={e.sideExit ? (e.x1 + e.x2) / 2 : Math.abs(e.x1 - e.x2) < 5 ? e.x1 - 14 : e.x1 + (e.x2 - e.x1) * 0.6}
+              y={e.sideExit ? e.y1 - 6 : Math.abs(e.x1 - e.x2) < 5 ? midY + 2 : midY - 6}
               className="fc-edge-label"
-              textAnchor="middle"
+              textAnchor={Math.abs(e.x1 - e.x2) < 5 && !e.sideExit ? 'end' : 'middle'}
             >
               {e.label}
             </text>
