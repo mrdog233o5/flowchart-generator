@@ -303,7 +303,7 @@ export default function Flowchart() {
           {e.label && (
             <text
               x={e.sideEnter ? e.x1 + (e.x2 - e.x1) * 0.4
-                : e.sideExit ? (e.x1 + e.x2) / 2
+                : e.sideExit ? e.x1 + 20
                 : Math.abs(e.x1 - e.x2) < 5 ? e.x1 - 14
                 : e.x1 + (e.x2 - e.x1) * 0.6}
               y={e.sideEnter ? midY - 6
