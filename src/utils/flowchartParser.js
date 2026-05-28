@@ -4,7 +4,9 @@
  */
 
 function simplifyText(text) {
-  return text.replace(/^System\.out\.print(?:ln)?\s*\(.*/, 'output');
+  const m = text.match(/^System\.out\.print(?:ln)?\s*\((.+)\)\s*;?\s*$/);
+  if (m) return 'output ' + m[1];
+  return text;
 }
 
 function classifyLine(line) {
