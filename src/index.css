@@ -117,7 +117,7 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   line-height: 1.3;
   overflow: hidden;
@@ -128,6 +128,15 @@ body {
 .fc-rect {
   stroke: #a1a1aa;
   stroke-width: 1.5;
+}
+
+.fc-clickable {
+  cursor: pointer;
+}
+
+.fc-clickable:hover .fc-rect,
+.fc-clickable:hover polygon {
+  filter: brightness(0.95);
 }
 
 .fc-start-end-shape {

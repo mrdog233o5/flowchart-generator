@@ -1,16 +1,16 @@
 import { useState, useMemo } from 'react';
 import { parseJavaCode, flattenTree } from '../utils/flowchartParser';
 
-const DECISION_H = 56;
-const MERGE_SIZE = 12;
-const START_END_W = 100;
-const COL_GAP = 260;
-const ROW_GAP = 30;
-const PAD_X = 40;
-const PAD_Y = 30;
-const COL_REF_W = 180;
-const MIN_W = 80;
-const NODE_MIN_H = 44;
+const DECISION_H = 42;
+const MERGE_SIZE = 10;
+const START_END_W = 80;
+const COL_GAP = 190;
+const ROW_GAP = 16;
+const PAD_X = 24;
+const PAD_Y = 16;
+const COL_REF_W = 140;
+const MIN_W = 60;
+const NODE_MIN_H = 32;
 
 const SAMPLE_CODE = `public class Example {
   public static void main(String[] args) {
@@ -26,11 +26,11 @@ function computeNodeDims(node) {
   if (node.type === 'merge') return { w: MERGE_SIZE, h: MERGE_SIZE };
 
   const text = node.text || '';
-  const charW = 8;
-  const lineH = 17;
-  const padX = (node.type === 'start' || node.type === 'end') ? 28 : 16;
-  const padY = 10;
-  const maxContentW = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 220 : 260;
+  const charW = 7;
+  const lineH = 14;
+  const padX = (node.type === 'start' || node.type === 'end') ? 20 : 12;
+  const padY = 6;
+  const maxContentW = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 170 : 200;
   const charsPerLine = Math.max(1, Math.floor(maxContentW / charW));
 
   let totalLines = 0;
@@ -192,6 +192,11 @@ function layoutFlowchart(flatNodes, flatEdges) {
 export default function Flowchart() {
   const [code, setCode] = useState(SAMPLE_CODE);
   const [error, setError] = useState('');
+  const [flippedNodes, setFlippedNodes] = useState({});
+
+  const toggleShape = (nodeId) => {
+    setFlippedNodes((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
+  };
 
   const tree = useMemo(() => {
     try {
@@ -236,7 +241,7 @@ export default function Flowchart() {
       return (
         <g key={node.id}>
           <polygon points={points} className={cls} />
-          <foreignObject x={x + 10} y={y + 8} width={w - 20} height={h - 16}>
+          <foreignObject x={x + 8} y={y + 6} width={w - 16} height={h - 12}>
             <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
               {node.text}
             </div>
@@ -258,12 +263,25 @@ export default function Flowchart() {
     }
 
     if (node.type === 'input' || node.type === 'output') {
-      const slant = 16;
+      const flipped = flippedNodes[node.id];
+      if (flipped) {
+        return (
+          <g key={node.id} className="fc-clickable" onClick={() => toggleShape(node.id)}>
+            <rect x={x} y={y} width={w} height={h} rx={0} ry={0} className="fc-rect fc-process-shape" />
+            <foreignObject x={x + 4} y={y + 3} width={w - 8} height={h - 6}>
+              <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
+                {node.text}
+              </div>
+            </foreignObject>
+          </g>
+        );
+      }
+      const slant = 12;
       const points = `${x + slant},${y} ${x + w},${y} ${x + w - slant},${y + h} ${x},${y + h}`;
       return (
-        <g key={node.id}>
+        <g key={node.id} className="fc-clickable" onClick={() => toggleShape(node.id)}>
           <polygon points={points} className="fc-rect fc-process-shape" />
-          <foreignObject x={x + slant + 6} y={y + 4} width={w - slant - 12} height={h - 8}>
+          <foreignObject x={x + slant + 4} y={y + 3} width={w - slant - 8} height={h - 6}>
             <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
               {node.text}
             </div>
@@ -272,14 +290,31 @@ export default function Flowchart() {
       );
     }
 
-    const rx = node.type === 'start' || node.type === 'end' ? 22 : 0;
+    const flipped = flippedNodes[node.id];
+    if (flipped) {
+      const slant = 12;
+      const pts = `${x + slant},${y} ${x + w},${y} ${x + w - slant},${y + h} ${x},${y + h}`;
+      return (
+        <g key={node.id} className="fc-clickable" onClick={() => toggleShape(node.id)}>
+          <polygon points={pts} className="fc-rect fc-process-shape" />
+          <foreignObject x={x + slant + 4} y={y + 3} width={w - slant - 8} height={h - 6}>
+            <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
+              {node.text}
+            </div>
+          </foreignObject>
+        </g>
+      );
+    }
+
+    const rx = node.type === 'start' || node.type === 'end' ? 16 : 0;
     const cls =
       node.type === 'start' || node.type === 'end'
         ? 'fc-rect fc-start-end-shape'
         : 'fc-rect fc-process-shape';
 
+    const isToggleable = node.type === 'process';
     return (
-      <g key={node.id}>
+      <g key={node.id} className={isToggleable ? 'fc-clickable' : ''} onClick={isToggleable ? () => toggleShape(node.id) : undefined}>
         <rect
           x={x}
           y={y}
