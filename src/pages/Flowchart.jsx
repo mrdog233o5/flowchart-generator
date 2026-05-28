@@ -143,7 +143,7 @@ function layoutFlowchart(flatNodes, flatEdges) {
         y1 = fromPos.y + fromPos.h;
       }
     } else if (e.loopBack) {
-      x1 = fromPos.x - 30;
+      x1 = fromPos.x;
       y1 = fromPos.y + fromPos.h / 2;
     } else {
       x1 = fromPos.x + fromPos.w / 2;
@@ -276,7 +276,8 @@ export default function Flowchart() {
 
       let path = '';
       if (e.sideEnter) {
-        path = `M ${e.x1} ${e.y1} L ${e.x1} ${e.y2} L ${e.x2} ${e.y2}`;
+        const leftOff = e.x1 - 30;
+        path = `M ${e.x1} ${e.y1} L ${leftOff} ${e.y1} L ${leftOff} ${e.y2} L ${e.x2} ${e.y2}`;
       } else if (e.sideExit) {
         if (e.x2 < e.x1) {
           const rightX = e.x1 + 40;
