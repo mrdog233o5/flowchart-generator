@@ -47,12 +47,12 @@ function computeNodeDims(node, flipped) {
   if (node.type === 'merge') return { w: MERGE_SIZE, h: MERGE_SIZE };
 
   const text = node.text || '';
-  const charW = 6.5;
-  const lineH = 14;
+  const charW = 7;
+  const lineH = 15;
   const flipExtra = flipped ? 2 : 0;
   const padX = (node.type === 'start' || node.type === 'end') ? 20 : 12 + flipExtra;
-  const padY = 6;
-  const maxChars = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 15 : 18;
+  const padY = 8;
+  const maxChars = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 14 : 17;
 
   const wrapped = wordWrap(text, maxChars);
   const totalLines = wrapped.length || 1;
