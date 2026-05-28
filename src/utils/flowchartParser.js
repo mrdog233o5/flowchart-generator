@@ -84,18 +84,28 @@ function buildTree(lines) {
       }
 
       case 'elseif': {
-        // The if-body was already popped by '}'. Find the last decision node
-        // in the parent context and attach this elseif as its false branch.
-        const lastNode = ctx.nodes[ctx.nodes.length - 1];
-        if (lastNode && lastNode.type === 'decision') {
+        // Walk the falseBranch chain to find the last decision node,
+        // so stacked elseifs don't overwrite each other.
+        const firstNode = ctx.nodes[ctx.nodes.length - 1];
+        let lastDecision = firstNode;
+        while (
+          lastDecision &&
+          lastDecision.type === 'decision' &&
+          lastDecision.falseBranch &&
+          lastDecision.falseBranch.length > 0 &&
+          lastDecision.falseBranch[0].type === 'decision'
+        ) {
+          lastDecision = lastDecision.falseBranch[0];
+        }
+        if (lastDecision && lastDecision.type === 'decision') {
           const condition = extractCondition(line, 'else\\s+if');
           const node = {
             type: 'decision',
-            condition: 'else if (' + condition + ')',
+            condition: condition,
             trueBranch: [],
             falseBranch: null,
           };
-          lastNode.falseBranch = [node];
+          lastDecision.falseBranch = [node];
           stack.push({ nodes: node.trueBranch, type: 'if-body', parentNode: node });
         } else {
           ctx.nodes.push({ type: 'process', text: line });
@@ -104,15 +114,25 @@ function buildTree(lines) {
       }
 
       case 'else': {
-        // The if-body was already popped by '}'. Find the last decision node
-        // in the parent context.
-        const lastNode = ctx.nodes[ctx.nodes.length - 1];
-        if (lastNode && lastNode.type === 'decision') {
-          lastNode.falseBranch = [];
+        // Walk the falseBranch chain to find the last decision node,
+        // so a stacked else doesn't overwrite preceding elseifs.
+        const firstNode = ctx.nodes[ctx.nodes.length - 1];
+        let lastDecision = firstNode;
+        while (
+          lastDecision &&
+          lastDecision.type === 'decision' &&
+          lastDecision.falseBranch &&
+          lastDecision.falseBranch.length > 0 &&
+          lastDecision.falseBranch[0].type === 'decision'
+        ) {
+          lastDecision = lastDecision.falseBranch[0];
+        }
+        if (lastDecision && lastDecision.type === 'decision') {
+          lastDecision.falseBranch = [];
           stack.push({
-            nodes: lastNode.falseBranch,
+            nodes: lastDecision.falseBranch,
             type: 'else-body',
-            parentNode: lastNode,
+            parentNode: lastDecision,
           });
         } else {
           ctx.nodes.push({ type: 'process', text: line });
@@ -330,12 +350,11 @@ export function flattenTree(tree) {
 
   function processBlock(block, depth) {
     minDepth = Math.min(minDepth, depth);
-    if (block.length === 0) return { first: null, last: null };
+    if (block.length === 0) return { first: null, last: null, prev: null, pfExit: false };
 
     let prev = null;
     let prevForloopExit = false;
     let blockFirst = null;
-    let blockLast = null;
 
     function connectPrev(id) {
       if (!prev) return;
@@ -354,6 +373,17 @@ export function flattenTree(tree) {
       }
     }
 
+    // Expand prev/prevForloopExit into an array of exit descriptors.
+    function collectExits(p, pf) {
+      if (!p) return [];
+      if (typeof p === 'string') {
+        if (pf) return [{ exitId: p, label: 'F', exitRight: true }];
+        return [{ exitId: p, label: '' }];
+      }
+      // multi
+      return p.exits.map((e) => ({ exitId: e.exitId, label: e.label || '', exitRight: e.exitRight || false }));
+    }
+
     for (const item of block) {
       if (item.type === 'process') {
         const id = nextId();
@@ -361,7 +391,7 @@ export function flattenTree(tree) {
         connectPrev(id);
         if (!blockFirst) blockFirst = id;
         prev = id;
-        blockLast = id;
+        prevForloopExit = false;
       } else if (item.type === 'decision') {
         const decId = nextId();
         nodes.push({ id: decId, type: 'decision', text: item.condition, depth });
@@ -373,26 +403,32 @@ export function flattenTree(tree) {
           edges.push({ from: decId, to: trueResult.first, label: 'T' });
         }
 
-        let falseLast = null;
+        let falseResult = null;
         if (item.falseBranch && item.falseBranch.length > 0) {
-          const falseResult = processBlock(item.falseBranch, depth + 1);
+          falseResult = processBlock(item.falseBranch, depth + 1);
           if (falseResult.first) {
             edges.push({ from: decId, to: falseResult.first, label: 'F' });
-            falseLast = falseResult.last;
           }
         }
 
         const exits = [];
-        if (trueResult.last) exits.push({ exitId: trueResult.last, label: '' });
-        if (falseLast) exits.push({ exitId: falseLast, label: '' });
-        else exits.push({ exitId: decId, label: 'F', exitRight: true });
+        // Use collectExits to capture ALL exits from each branch, including multi-exits
+        if (trueResult.last) {
+          exits.push(...collectExits(trueResult.prev, trueResult.pfExit));
+        }
+        if (falseResult && falseResult.last) {
+          exits.push(...collectExits(falseResult.prev, falseResult.pfExit));
+        } else if (!item.falseBranch || item.falseBranch.length === 0) {
+          // No false branch → the decision itself carries the F exit
+          exits.push({ exitId: decId, label: 'F', exitRight: true });
+        }
 
         if (exits.length === 1) {
           prev = exits[0].exitId;
-          blockLast = exits[0].exitId;
+          prevForloopExit = exits[0].exitRight || false;
         } else {
           prev = { type: 'multi', exits };
-          blockLast = trueResult.last || decId;
+          prevForloopExit = false;
         }
       } else if (item.type === 'forloop') {
         if (item.update) {
@@ -414,7 +450,6 @@ export function flattenTree(tree) {
 
         prev = loopId;
         prevForloopExit = true;
-        blockLast = loopId;
       } else if (item.type === 'loop') {
         if (item.update) {
           item.body.push({ type: 'process', text: item.update });
@@ -438,11 +473,12 @@ export function flattenTree(tree) {
         edges.push({ from: loopId, to: exitId, label: 'F', exitRight: true });
 
         prev = exitId;
-        blockLast = exitId;
+        prevForloopExit = false;
       }
     }
 
-    return { first: blockFirst, last: blockLast };
+    const blockLast = prev && typeof prev === 'string' ? prev : (prev && prev.type === 'multi' ? prev.exits[0]?.exitId : null);
+    return { first: blockFirst, last: blockLast, prev, pfExit: prevForloopExit };
   }
 
   const BASE = 1;
@@ -455,7 +491,22 @@ export function flattenTree(tree) {
     }
     if (result.last) {
       nodes.push({ id: endId, type: 'end', text: 'End', depth: BASE });
-      edges.push({ from: result.last, to: endId, label: '' });
+      // Connect ALL exits (including multi-exits) to End
+      const exits = [];
+      if (result.prev && typeof result.prev !== 'string' && result.prev.type === 'multi') {
+        exits.push(...result.prev.exits);
+      } else if (result.prev && typeof result.prev === 'string') {
+        const label = result.pfExit ? 'F' : '';
+        const exitRight = result.pfExit || false;
+        exits.push({ exitId: result.prev, label, exitRight });
+      } else {
+        exits.push({ exitId: result.last, label: '' });
+      }
+      exits.forEach(({ exitId, label, exitRight }) => {
+        const edge = { from: exitId, to: endId, label: label };
+        if (exitRight) edge.exitRight = true;
+        edges.push(edge);
+      });
     }
   } else {
     nodes.push({ id: endId, type: 'end', text: 'End', depth: BASE });
