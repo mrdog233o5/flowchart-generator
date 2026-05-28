@@ -179,6 +179,9 @@ function splitCompoundLine(line) {
 }
 
 function cleanLines(code) {
+  // 移除多行注释 /* ... */
+  code = code.replace(/\/\*[\s\S]*?\*\//g, '');
+
   let lines = code.split('\n');
 
   lines = lines
