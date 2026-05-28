@@ -43,13 +43,14 @@ function wordWrap(text, maxChars) {
   return lines;
 }
 
-function computeNodeDims(node) {
+function computeNodeDims(node, flipped) {
   if (node.type === 'merge') return { w: MERGE_SIZE, h: MERGE_SIZE };
 
   const text = node.text || '';
   const charW = 6.5;
   const lineH = 14;
-  const padX = (node.type === 'start' || node.type === 'end') ? 20 : 12;
+  const flipExtra = flipped ? 2 : 0;
+  const padX = (node.type === 'start' || node.type === 'end') ? 20 : 12 + flipExtra;
   const padY = 6;
   const maxChars = (node.type === 'decision' || node.type === 'loop' || node.type === 'forloop') ? 15 : 18;
 
@@ -71,13 +72,13 @@ function computeNodeDims(node) {
   return { w, h };
 }
 
-function layoutFlowchart(flatNodes, flatEdges) {
+function layoutFlowchart(flatNodes, flatEdges, flippedNodes) {
   const nodeMap = {};
   flatNodes.forEach((n) => { nodeMap[n.id] = n; });
 
   // Per-node dimensions
   const nodeDims = {};
-  flatNodes.forEach((n) => { nodeDims[n.id] = computeNodeDims(n); });
+  flatNodes.forEach((n) => { nodeDims[n.id] = computeNodeDims(n, flippedNodes[n.id]); });
 
   // Parent lookup for y-constraints
   const nodeParents = {};
@@ -230,8 +231,8 @@ export default function Flowchart() {
   );
 
   const layout = useMemo(
-    () => layoutFlowchart(flatNodes, flatEdges),
-    [flatNodes, flatEdges],
+    () => layoutFlowchart(flatNodes, flatEdges, flippedNodes),
+    [flatNodes, flatEdges, flippedNodes],
   );
 
   const svgWidth = Math.max(
@@ -297,7 +298,7 @@ export default function Flowchart() {
       return (
         <g key={node.id} className="fc-clickable" onClick={() => toggleShape(node.id)}>
           <polygon points={points} className="fc-rect fc-process-shape" />
-          <foreignObject x={x + slant + 4} y={y + 3} width={w - slant - 8} height={h - 6}>
+          <foreignObject x={x + 6} y={y + 3} width={w - 10} height={h - 6}>
             <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
               {node.text}
             </div>
@@ -313,7 +314,7 @@ export default function Flowchart() {
       return (
         <g key={node.id} className="fc-clickable" onClick={() => toggleShape(node.id)}>
           <polygon points={pts} className="fc-rect fc-process-shape" />
-          <foreignObject x={x + slant + 4} y={y + 3} width={w - slant - 8} height={h - 6}>
+          <foreignObject x={x + 6} y={y + 3} width={w - 10} height={h - 6}>
             <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
               {node.text}
             </div>
@@ -340,7 +341,7 @@ export default function Flowchart() {
           ry={rx}
           className={cls}
         />
-        <foreignObject x={x + 6} y={y + 4} width={w - 12} height={h - 8}>
+        <foreignObject x={x + 4} y={y + 3} width={w - 8} height={h - 6}>
           <div xmlns="http://www.w3.org/1999/xhtml" className="fc-node-text">
             {node.text}
           </div>
