@@ -191,7 +191,7 @@ export default function Flowchart() {
 
     if (node.type === 'decision' || node.type === 'loop') {
       const points = `${cx},${y} ${x + w},${cy} ${cx},${y + h} ${x},${cy}`;
-      const cls = node.type === 'decision' ? 'fc-diamond fc-decision-shape' : 'fc-diamond fc-loop-shape';
+      const cls = 'fc-diamond fc-decision-shape';
       return (
         <g key={node.id}>
           <polygon points={points} className={cls} />

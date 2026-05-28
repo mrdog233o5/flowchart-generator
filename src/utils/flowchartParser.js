@@ -114,10 +114,13 @@ function buildTree(lines) {
 
       case 'for': {
         const parts = extractForParts(line);
-        const display = parts.init
-          ? 'for (' + parts.init + '; ' + parts.condition + '; ' + parts.update + ')'
-          : 'for (' + parts.condition + ')';
-        const node = { type: 'loop', condition: display, body: [] };
+        // init as separate process node before the loop
+        if (parts.init) {
+          ctx.nodes.push({ type: 'process', text: parts.init });
+        }
+        // only show condition in diamond (like if)
+        const display = parts.condition || '';
+        const node = { type: 'loop', condition: display, body: [], update: parts.update };
         ctx.nodes.push(node);
         stack.push({ nodes: node.body, type: 'for-body', parentNode: node });
         break;
@@ -175,7 +178,7 @@ function cleanLines(code) {
     .map((l) => {
       const commentIdx = l.indexOf('//');
       if (commentIdx >= 0) l = l.slice(0, commentIdx);
-      return l.trim();
+      return l.trim().replace(/;$/, '');
     })
     .filter((l) => l.length > 0);
 
@@ -261,6 +264,10 @@ export function flattenTree(tree) {
         prev = mergeId;
         blockLast = mergeId;
       } else if (item.type === 'loop') {
+        if (item.update) {
+          item.body.push({ type: 'process', text: item.update });
+        }
+
         const loopId = nextId();
         nodes.push({ id: loopId, type: 'loop', text: item.condition, depth });
         if (prev) edges.push({ from: prev, to: loopId, label: '' });

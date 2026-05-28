@@ -150,11 +150,6 @@ body {
   stroke: #fde047;
 }
 
-.fc-loop-shape {
-  fill: #f3e8ff;
-  stroke: #d8b4fe;
-}
-
 /* Merge circle */
 .fc-merge-circle {
   fill: #e4e4e7;
