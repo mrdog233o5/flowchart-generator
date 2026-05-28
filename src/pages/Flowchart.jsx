@@ -276,7 +276,7 @@ export default function Flowchart() {
 
       let path = '';
       if (e.sideEnter) {
-        const leftOff = e.x1 - 30;
+        const leftOff = Math.max(8, e.x1 - 60);
         path = `M ${e.x1} ${e.y1} L ${leftOff} ${e.y1} L ${leftOff} ${e.y2} L ${e.x2} ${e.y2}`;
       } else if (e.sideExit) {
         if (e.x2 < e.x1) {
