@@ -234,7 +234,12 @@ export function flattenTree(tree) {
 
     function connectPrev(id) {
       if (!prev) return;
-      if (prevForloopExit) {
+      if (prev.type === 'multi') {
+        prev.exits.forEach(({ exitId, label: exitLabel }) => {
+          edges.push({ from: exitId, to: id, label: exitLabel });
+        });
+        prevForloopExit = false;
+      } else if (prevForloopExit) {
         edges.push({ from: prev, to: id, label: 'F', exitRight: true });
         prevForloopExit = false;
       } else {
@@ -270,17 +275,18 @@ export function flattenTree(tree) {
           }
         }
 
-        const mergeId = nextId();
-        nodes.push({ id: mergeId, type: 'merge', text: '', depth });
-        if (trueResult.last)
-          edges.push({ from: trueResult.last, to: mergeId, label: '' });
-        if (falseLast)
-          edges.push({ from: falseLast, to: mergeId, label: '' });
-        else
-          edges.push({ from: decId, to: mergeId, label: 'F' });
+        const exits = [];
+        if (trueResult.last) exits.push({ exitId: trueResult.last, label: '' });
+        if (falseLast) exits.push({ exitId: falseLast, label: '' });
+        else exits.push({ exitId: decId, label: 'F' });
 
-        prev = mergeId;
-        blockLast = mergeId;
+        if (exits.length === 1) {
+          prev = exits[0].exitId;
+          blockLast = exits[0].exitId;
+        } else {
+          prev = { type: 'multi', exits };
+          blockLast = trueResult.last || decId;
+        }
       } else if (item.type === 'forloop') {
         if (item.update) {
           item.body.push({ type: 'process', text: item.update });
